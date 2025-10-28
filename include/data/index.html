@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>ESP32 Web Display</title>
+  </head>
+  <body>
+    <canvas id="screen" width="320" height="200"></canvas>
+    <script>
+      // 受信中のJPEGデータを保持するためのバッファ
+      let canvas = document.getElementById("screen");
+      let ctx = canvas.getContext("2d");
+
+      let ws = new WebSocket("ws://" + location.hostname + ":81");
+      ws.binaryType = "arraybuffer";
+
+      ws.onmessage = (event) => {
+        const data = event.data;
+        // ESP32からの制御メッセージ or バイナリ判定
+        if (typeof data === "string") {
+          return;
+        }
+
+        // バイナリデータ（ArrayBuffer）の場合
+        if (data instanceof ArrayBuffer) {
+          const jpegData = new Blob([data], { type: "image/jpeg" });
+          const img = new Image();
+          img.onload = () => ctx.drawImage(img, 0, 0);
+          img.src = URL.createObjectURL(jpegData);
+        }
+      };
+
+      document.addEventListener("keydown", (e) => {
+        ws.send(e.key);
+      });
+
+      ws.onclose = () => {
+        console.log("WebSocket closed.");
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket error:", err);
+      };
+    </script>
+  </body>
+</html>
